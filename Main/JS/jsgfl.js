@@ -7,6 +7,33 @@ function drawString(string,font,x,y,color){
     ctx.font = font;
     ctx.fillText(string,x,y);
 }
+function point(x, y){
+    this.x = x;
+    this.y = y;
+    this.width = 0;
+    this.height = 0;
+}
+function line(initX,initY,finalX,finalY){
+    this.xi = initX;
+    this.xf = finalX;
+    this.yi = initY;
+    this.yf = finalY;
+    this.xDelta = this.xf - this.xi;
+    this.yDelta = this.yf - this.yi;
+    this.lineLength = Math.sqrt(Math.pow(this.xDelta,2) + Math.pow(this.yDelta,2));
+    this.linePoints = [];
+    for(var i = 0; i < Math.floor(this.lineLength); i++){
+        this.linePoints[i] = new point((this.xi + (this.xDelta / this.lineLength * i)),(this.yi + (this.yDelta / this.lineLength * i)));
+    }
+}
+function drawLine(line,width,color){
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(line.xi,line.yi);
+    ctx.lineTo(line.xf,line.yf);
+    ctx.stroke();
+}
 function rectMngr(x,y,width,height,color,id){
     this.type = "rect";
     this.id = id;
@@ -20,6 +47,7 @@ function rectMngr(x,y,width,height,color,id){
     this.down = false;
     this.right = false;
     this.up = false;
+    this.deg = 0;
 }
 function imageData(x,y,width,height,src,id){
     this.type = "image";
@@ -36,6 +64,7 @@ function imageData(x,y,width,height,src,id){
     this.down = false;
     this.right = false;
     this.up = false;
+    this.deg = 0;
 }
 function animationData(x,y,width,height,IW,IH,src,id){
     this.type = "animation";
@@ -56,30 +85,64 @@ function animationData(x,y,width,height,IW,IH,src,id){
     this.down = false;
     this.right = false;
     this.up = false;
+    this.deg = 0;
 }
+function drawNormalImage(data){
+    ctx.drawImage(data.sprite,
+        data.x,
+        data.y,
+        data.width,
+        data.height);
+}
+function drawNormalRect(data){
+    ctx.fillStyle = data.color;
+    ctx.fillRect(data.x,data.y,data.width,data.height);
+}
+function drawAnimatedImage(data){
+    ctx.drawImage(data.sprite,
+        data.clipStartX,
+        data.clipStartY,
+        data.clipToX,
+        data.clipToY,
+        data.x,
+        data.y,
+        data.width,
+        data.height);
+}
+function imageCenterRotate(rect,deg,drawFun){
+    var rad = deg * Math.PI / 180;
+    var deltaX = rect.x + rect.width/2,
+        deltaY = rect.y + rect.height/2;
+    rect.tempX = rect.x;
+    rect.tempY = rect.y;
+    rect.x = -rect.width/2;
+    rect.y = -rect.height/2;
+    ctx.save();
+    ctx.translate(deltaX,deltaY);
+    ctx.rotate(rad);
+
+    drawFun(rect);
+
+    ctx.translate(-deltaX,-deltaY);
+    ctx.restore();
+    if(rect.tempX != rect.x){
+        rect.x = rect.tempX;
+    }
+    if(rect.tempY != rect.y){
+        rect.y = rect.tempY;
+    }
+}
+//function imageCustomRotate(){}
 function imageShow(data){
     if(data.visible){
         if(data.type === "image"){
-            ctx.drawImage(data.sprite,
-                data.x,
-                data.y,
-                data.width,
-                data.height);
+            imageCenterRotate(data,data.deg,drawNormalImage);
         }
         else if(data.type === "animation"){
-            ctx.drawImage(data.sprite,
-                data.clipStartX,
-                data.clipStartY,
-                data.clipToX,
-                data.clipToY,
-                data.x,
-                data.y,
-                data.width,
-                data.height);
+            imageCenterRotate(data,data.deg,drawAnimatedImage);
         }
         else if(data.type === "rect"){
-            ctx.fillStyle = data.color;
-            ctx.fillRect(data.x,data.y,data.width,data.height);
+            imageCenterRotate(data,data.deg,drawNormalRect);
         }
     }
 }
@@ -130,6 +193,13 @@ function collisionRight(r1, r2){
             return true;
         }else{
             false;
+        }
+    }
+}
+function linearCollisionCheck(line,rect){
+    for(var i = 0; i < line.linePoints.length; i++){
+        if(collisionCheck(line.linePoints[i],rect)){
+            return true;
         }
     }
 }
